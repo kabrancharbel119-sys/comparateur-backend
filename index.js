@@ -5,32 +5,37 @@ const cors = require("cors");
 const app = express();
 app.use(cors());
 
-const BESTBUY_API_KEY = "REMPLACE_MOI";
+const SERPAPI_KEY = process.env.SERPAPI_KEY;
 
 app.get("/api/search", async (req, res) => {
-  const query = req.query.q;
-  if (!query) {
-    return res.json([]);
-  }
+  const q = req.query.q;
+  if (!q) return res.json([]);
 
   try {
-    const url = `https://api.bestbuy.com/v1/products(search=${encodeURIComponent(
-      query
-    )})?format=json&show=name,salePrice,image,url&sort=salePrice.asc&pageSize=3&apiKey=${BESTBUY_API_KEY}`;
+    const response = await axios.get("https://serpapi.com/search.json", {
+      params: {
+        engine: "google_shopping",
+        q,
+        location: "Canada",
+        hl: "en",
+        gl: "ca",
+        api_key: SERPAPI_KEY
+      }
+    });
 
-    const response = await axios.get(url);
+    const results = (response.data.shopping_results || [])
+      .slice(0, 9)
+      .map(item => ({
+        title: item.title,
+        price: item.price,
+        store: item.source,
+        image: item.thumbnail,
+        link: item.link
+      }));
 
-    const products = response.data.products.map(p => ({
-      store: "BestBuy",
-      title: p.name,
-      price: p.salePrice,
-      image: p.image,
-      link: p.url
-    }));
-
-    res.json(products);
+    res.json(results);
   } catch (err) {
-    res.status(500).json({ error: "Erreur BestBuy" });
+    res.status(500).json({ error: "Erreur SerpAPI" });
   }
 });
 
@@ -40,3 +45,4 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Serveur lancé sur port", PORT));
+
