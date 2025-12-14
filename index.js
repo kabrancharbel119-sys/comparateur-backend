@@ -208,7 +208,7 @@ app.get("/", (req, res) => res.send("Backend comparateur actif ✅"));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Serveur lancé sur port", PORT));
-{
+        {
   "name": "comparateur-backend",
   "version": "1.0.0",
   "type": "module",
