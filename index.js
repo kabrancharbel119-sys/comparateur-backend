@@ -7,100 +7,96 @@ app.use(cors());
 
 const SERPAPI_KEY = process.env.SERPAPI_KEY;
 
-// --- Helpers ---
-function normalizeStoreName(source = "") {
-  const s = source.toLowerCase();
+// --- Utils ---
+function parseCadPriceToNumber(priceStr) {
+  if (!priceStr) return null;
 
-  // BestBuy (éviter "Best Buy Marketplace" => on le garde quand même dans BestBuy)
-  if (s.includes("best buy")) return "BestBuy";
+  // Examples: "$279.99", "CA$279.99", "C$279.99", "$279", "279.99"
+  const cleaned = String(priceStr)
+    .replace(/CA\$|C\$|CAD|\s/gi, "")
+    .replace(/,/g, "")
+    .match(/(\d+(\.\d+)?)/);
 
-  // Walmart
-  if (s.includes("walmart")) return "Walmart";
+  if (!cleaned) return null;
+  const num = Number(cleaned[1]);
+  return Number.isFinite(num) ? num : null;
+}
 
-  // Amazon
+function formatCad(priceNumber) {
+  if (priceNumber == null || !Number.isFinite(priceNumber)) return null;
+  // Keep it simple & consistent for frontend
+  return `CA$${priceNumber.toFixed(2)}`;
+}
+
+function normalizeStore(source) {
+  const s = String(source || "").toLowerCase();
+
   if (s.includes("amazon")) return "Amazon";
+  if (s.includes("walmart")) return "Walmart";
+  if (s.includes("best buy") || s.includes("bestbuy")) return "BestBuy";
 
   return null;
 }
 
-function parsePriceToNumber(priceStr = "") {
-  // Ex: "$1,129.00", "C$69.99", "69.99"
-  const cleaned = String(priceStr)
-    .replace(/C\$/gi, "")
-    .replace(/\$/g, "")
-    .replace(/CAD/gi, "")
-    .replace(/,/g, "")
-    .trim();
+/**
+ * SerpAPI google_shopping results can include:
+ * - link: often Google Shopping product page (redirect)
+ * - product_link: often merchant page (what we want)
+ * - offers_link / offer_link: sometimes merchant/offer page
+ * We'll prefer merchant-direct links if available.
+ */
+function pickBestMerchantLink(item) {
+  // Prefer direct merchant links
+  if (item.product_link) return item.product_link;
+  if (item.offer_link) return item.offer_link;
+  if (item.offers_link) return item.offers_link;
 
-  const n = Number(cleaned);
-  return Number.isFinite(n) ? n : null;
+  // Some results have "link" to Google Shopping; keep it as last resort
+  if (item.link) return item.link;
+
+  return null;
 }
 
-function formatCAD(n) {
-  try {
-    return new Intl.NumberFormat("en-CA", {
-      style: "currency",
-      currency: "CAD",
-      maximumFractionDigits: 2,
-    }).format(n);
-  } catch {
-    return `$${n.toFixed(2)} CAD`;
-  }
+function pickImage(item) {
+  return item.thumbnail || item.image || item.thumbnail_url || null;
 }
 
-// Essaie d'extraire un lien vendeur direct depuis un lien Google (quand possible)
-function tryExtractDirectUrl(link) {
-  try {
-    const u = new URL(link);
-    const sp = u.searchParams;
-
-    // parfois c'est ?url=... ou ?adurl=...
-    const direct = sp.get("url") || sp.get("adurl") || sp.get("u");
-    if (direct) return decodeURIComponent(direct);
-
-    return link;
-  } catch {
-    return link;
-  }
+function safeString(x) {
+  return (x === undefined || x === null) ? "" : String(x);
 }
+
+// --- Routes ---
+app.get("/", (req, res) => {
+  res.send("Backend comparateur actif ✅");
+});
 
 /**
- * Best effort: si SerpAPI nous donne déjà un lien direct, on le prend.
- * Sinon, on essaye d'extraire url=... depuis le lien.
+ * Expected by your frontend:
+ * GET /api/search?q=airpods
+ * Response:
+ * {
+ *   query: "airpods",
+ *   results: { Amazon: [...], Walmart: [...], BestBuy: [...] }
+ * }
  */
-function pickBestLink(item) {
-  const directCandidates = [
-    item.product_link,
-    item.redirect_link,
-    item.merchant_link,
-    item.offer_link,
-    item.link,
-  ].filter(Boolean);
-
-  if (!directCandidates.length) return null;
-
-  // Premier candidat (souvent link), puis extraction url=
-  return tryExtractDirectUrl(directCandidates[0]);
-}
-
-// --- API ---
 app.get("/api/search", async (req, res) => {
-  const q = (req.query.q || "").trim();
+  const q = safeString(req.query.q).trim();
   if (!q) {
     return res.json({
       query: "",
-      results: { Amazon: [], Walmart: [], BestBuy: [] },
+      results: { Amazon: [], Walmart: [], BestBuy: [] }
     });
   }
 
   if (!SERPAPI_KEY) {
     return res.status(500).json({
-      error: "SERPAPI_KEY manquante dans Render > Environment",
+      error: "SERPAPI_KEY manquante sur Render",
+      hint: "Render → Environment → SERPAPI_KEY = ta clé, puis redeploy"
     });
   }
 
   try {
-    // On force Canada (gl=ca) et location Canada
+    // Use Google Shopping engine, Canada context
     const response = await axios.get("https://serpapi.com/search.json", {
       params: {
         engine: "google_shopping",
@@ -108,58 +104,65 @@ app.get("/api/search", async (req, res) => {
         location: "Canada",
         hl: "en",
         gl: "ca",
-        api_key: SERPAPI_KEY,
+        api_key: SERPAPI_KEY
       },
-      timeout: 30000,
+      timeout: 20000
     });
 
-    const shopping = response.data.shopping_results || [];
+    const shoppingResults = response.data?.shopping_results || [];
 
-    // On prépare la structure attendue par ton frontend
-    const grouped = {
+    // Prepare buckets
+    const buckets = {
       Amazon: [],
       Walmart: [],
-      BestBuy: [],
+      BestBuy: []
     };
 
-    // On filtre uniquement Amazon/Walmart/BestBuy + normalisation + prix CAD
-    for (const item of shopping) {
-      const storeKey = normalizeStoreName(item.source || item.store || "");
-      if (!storeKey) continue;
+    for (const item of shoppingResults) {
+      const store = normalizeStore(item.source || item.seller || item.merchant);
+      if (!store) continue; // ignore other merchants
 
-      const rawPrice = item.price || item.extracted_price || item.price_raw || "";
-      const n = parsePriceToNumber(rawPrice);
+      const priceNumber = parseCadPriceToNumber(item.price);
+      if (priceNumber == null) continue; // skip if no price
 
-      // Si pas de prix, on ignore (sinon ça casse le tri)
-      if (n === null) continue;
+      const link = pickBestMerchantLink(item);
+      if (!link) continue;
 
-      grouped[storeKey].push({
-        title: item.title || "Produit",
-        store: storeKey === "BestBuy" ? "BestBuy.ca" : storeKey === "Walmart" ? "Walmart.ca" : "Amazon.ca",
-        // CAD format
-        price: formatCAD(n),
-        price_number: n, // utile pour tri backend
-        image: item.thumbnail || item.image || "",
-        // lien vendeur (best effort)
-        link: pickBestLink(item) || "",
-      });
+      const product = {
+        store,
+        title: safeString(item.title),
+        // Frontend uses string; keep it CAD
+        price: formatCad(priceNumber),
+        // Optional numeric for debugging/sorting if needed
+        price_value: priceNumber,
+        image: pickImage(item),
+        link
+      };
+
+      // Only keep useful entries
+      if (!product.title || !product.image) {
+        // If image missing, we still keep it (some results don’t have thumbnails)
+        // but title is required
+        if (!product.title) continue;
+      }
+
+      buckets[store].push(product);
     }
 
-    // Tri du moins cher au plus cher + top 3 par magasin
-    for (const k of Object.keys(grouped)) {
-      grouped[k] = grouped[k]
-        .sort((a, b) => (a.price_number ?? 9e15) - (b.price_number ?? 9e15))
-        .slice(0, 3)
-        .map(({ price_number, ...rest }) => rest); // on retire price_number
+    // Sort each store by price ascending and keep top 3
+    for (const store of Object.keys(buckets)) {
+      buckets[store].sort((a, b) => (a.price_value || 1e18) - (b.price_value || 1e18));
+      buckets[store] = buckets[store].slice(0, 3);
     }
 
+    // Final response shape expected by your frontend
     return res.json({
       query: q,
-      results: grouped,
-      meta: {
-        source: "SerpAPI (Google Shopping)",
-        country: "CA",
-      },
+      results: {
+        Amazon: buckets.Amazon,
+        Walmart: buckets.Walmart,
+        BestBuy: buckets.BestBuy
+      }
     });
   } catch (err) {
     const status = err.response?.status || 500;
@@ -168,14 +171,10 @@ app.get("/api/search", async (req, res) => {
     return res.status(status).json({
       error: "Erreur SerpAPI",
       status,
-      message: err.message,
       details,
+      message: err.message
     });
   }
-});
-
-app.get("/", (req, res) => {
-  res.send("Backend comparateur actif ✅");
 });
 
 const PORT = process.env.PORT || 3000;
