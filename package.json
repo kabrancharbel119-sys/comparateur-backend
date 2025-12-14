@@ -1,14 +1,14 @@
 {
   "name": "comparateur-backend",
   "version": "1.0.0",
-  "description": "Backend comparateur produits Canada",
+  "description": "Backend comparateur Amazon/Walmart/BestBuy (Canada) via SerpAPI",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "axios": "^1.6.8",
+    "axios": "^1.7.9",
     "cors": "^2.8.5",
-    "express": "^4.19.2"
+    "express": "^4.21.2"
   }
 }
