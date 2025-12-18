@@ -13,216 +13,149 @@
     :root{
       --bg:#0b0f17;
       --panel:rgba(255,255,255,.06);
-      --stroke:rgba(255,255,255,.12);
+      --panel2:rgba(255,255,255,.08);
       --text:rgba(255,255,255,.92);
-      --muted:rgba(255,255,255,.6);
-      --accent:#3aa0ff;
+      --muted:rgba(255,255,255,.62);
+      --stroke:rgba(255,255,255,.10);
+      --shadow:0 16px 40px rgba(0,0,0,.45);
       --radius:18px;
+      --radius2:14px;
       --max:1180px;
+      --brand:linear-gradient(135deg,#7b61ff,#3498db);
     }
-
     *{box-sizing:border-box}
     body{
       margin:0;
       font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-      background:
-        radial-gradient(900px 600px at 10% 10%, rgba(58,160,255,.25), transparent 60%),
-        radial-gradient(900px 600px at 90% 20%, rgba(46,204,113,.15), transparent 55%),
-        var(--bg);
       color:var(--text);
+      background:
+        radial-gradient(900px 600px at 10% 10%, rgba(123,97,255,.35), transparent 60%),
+        radial-gradient(900px 600px at 90% 20%, rgba(46,204,113,.18), transparent 55%),
+        radial-gradient(800px 500px at 60% 100%, rgba(52,152,219,.18), transparent 60%),
+        var(--bg);
       min-height:100vh;
     }
-
     a{color:inherit;text-decoration:none}
+    .wrap{max-width:var(--max);margin:0 auto;padding:24px}
 
-    /* ===== HEADER ===== */
+    /* HEADER */
     header{
-      position:sticky;
-      top:0;
-      z-index:50;
-      backdrop-filter:blur(14px);
-      background:linear-gradient(to bottom, rgba(11,15,23,.85), rgba(11,15,23,.55));
+      position:sticky;top:0;z-index:50;
+      backdrop-filter:blur(16px);
+      background:linear-gradient(to bottom,rgba(11,15,23,.85),rgba(11,15,23,.45));
       border-bottom:1px solid var(--stroke);
     }
-
-    .wrap{
-      max-width:var(--max);
-      margin:0 auto;
-      padding:22px;
+    .header-inner{
+      display:flex;align-items:center;gap:16px;flex-wrap:wrap;
     }
-
-    .header-row{
-      display:flex;
-      align-items:center;
-      gap:16px;
-      flex-wrap:wrap;
-    }
-
     .brand{
-      display:flex;
-      align-items:center;
-      gap:14px;
+      display:flex;align-items:center;gap:12px;
+      font-weight:800;letter-spacing:.3px;
     }
-
-    .brand img{
-      width:42px;
-      height:42px;
-      border-radius:12px;
+    .logo{
+      width:36px;height:36px;border-radius:12px;
+      background:var(--brand);
+      box-shadow:0 10px 26px rgba(123,97,255,.35);
+      display:flex;align-items:center;justify-content:center;
+      font-weight:900;
     }
-
-    .brand-text{
-      display:flex;
-      flex-direction:column;
-      line-height:1.1;
+    .brand-title{
+      display:flex;flex-direction:column;line-height:1.1
     }
-
-    .brand-text strong{
-      font-size:18px;
-      font-weight:800;
-    }
-
-    .brand-text small{
-      font-size:12px;
-      color:var(--muted);
-      font-weight:600;
-    }
+    .brand-title span{font-size:18px}
+    .brand-title small{color:var(--muted);font-weight:600}
 
     .search{
-      flex:1;
-      display:flex;
-      gap:10px;
-      align-items:center;
+      flex:1;display:flex;gap:10px;align-items:center;
       background:var(--panel);
       border:1px solid var(--stroke);
-      padding:10px 12px;
-      border-radius:16px;
+      padding:10px;border-radius:16px;
       min-width:280px;
     }
-
     .search input{
-      flex:1;
-      background:transparent;
-      border:0;
-      outline:0;
-      color:var(--text);
-      font-size:16px;
+      flex:1;background:transparent;border:0;outline:0;
+      color:var(--text);font-size:16px;
+    }
+    .btn{
+      border:0;cursor:pointer;
+      padding:10px 14px;border-radius:14px;
+      font-weight:800;color:white;
+      background:var(--brand);
+      box-shadow:0 10px 22px rgba(52,152,219,.25);
     }
 
-    .search button{
-      border:0;
-      cursor:pointer;
-      padding:10px 16px;
-      border-radius:14px;
-      font-weight:800;
-      background:linear-gradient(135deg,#3aa0ff,#1f7bdc);
-      color:white;
-    }
+    /* CONTENT */
+    .hero h1{margin:18px 0 6px;font-size:28px}
+    .hero p{margin:0;color:var(--muted);max-width:760px}
 
-    /* ===== CONTENT ===== */
-    main{
-      max-width:var(--max);
-      margin:0 auto;
-      padding:28px 22px;
+    .status{
+      margin-top:18px;
+      background:var(--panel);
+      border:1px solid var(--stroke);
+      padding:12px 14px;border-radius:var(--radius2);
+      color:var(--muted);display:none
     }
+    .status.show{display:block}
 
-    h1{
-      margin:0 0 8px;
-      font-size:30px;
-      letter-spacing:-.4px;
-    }
-
-    p.lead{
-      margin:0 0 20px;
-      color:var(--muted);
-      max-width:760px;
-    }
-
-    /* ===== FOOTER ===== */
+    /* FOOTER */
     footer{
-      margin-top:40px;
+      margin-top:50px;
       border-top:1px solid var(--stroke);
-      background:rgba(255,255,255,.03);
+      background:rgba(0,0,0,.25);
     }
-
-    .footer-wrap{
+    .footer-inner{
       max-width:var(--max);
       margin:0 auto;
-      padding:26px 22px;
-      display:grid;
-      grid-template-columns:1fr auto;
-      gap:18px;
-      align-items:center;
-    }
-
-    .footer-left{
+      padding:24px;
       display:flex;
       flex-direction:column;
-      gap:6px;
-      font-size:13px;
+      gap:10px;
+      text-align:center;
       color:var(--muted);
-    }
-
-    .footer-right{
       font-size:13px;
-      color:var(--muted);
-      text-align:right;
     }
-
-    @media (max-width:700px){
-      .footer-wrap{
-        grid-template-columns:1fr;
-        text-align:center;
-      }
-      .footer-right{text-align:center}
-    }
+    .footer-inner strong{color:var(--text)}
   </style>
 </head>
 
 <body>
 
-<!-- ===== HEADER ===== -->
+<!-- HEADER -->
 <header>
-  <div class="wrap">
-    <div class="header-row">
-      <div class="brand">
-        <img src="logo-valuefinder.png" alt="ValueFinder logo">
-        <div class="brand-text">
-          <strong>ValueFinder</strong>
-          <small>Comparateur de prix Canada</small>
-        </div>
+  <div class="wrap header-inner">
+    <div class="brand">
+      <div class="logo">VF</div>
+      <div class="brand-title">
+        <span>ValueFinder</span>
+        <small>Comparateur de prix Canada</small>
       </div>
+    </div>
 
-      <div class="search">
-        <input type="text" placeholder="Rechercher un produit (ex: airpods, friteuse, TV…)">
-        <button>Rechercher</button>
-      </div>
+    <div class="search">
+      <input id="q" placeholder="Ex : airpods, playstation, friteuse..." />
+      <button class="btn" id="btn">Rechercher</button>
     </div>
   </div>
 </header>
 
-<!-- ===== MAIN ===== -->
-<main>
-  <h1>Trouve le meilleur prix, rapidement.</h1>
-  <p class="lead">
-    ValueFinder compare les prix sur <strong>Amazon, Walmart et BestBuy</strong> pour t’aider à acheter au meilleur prix.
-    Interface simple, résultats clairs, expérience fluide.
-  </p>
+<!-- CONTENT -->
+<main class="wrap">
+  <section class="hero">
+    <h1>Trouve le meilleur prix, en quelques secondes.</h1>
+    <p>ValueFinder compare les meilleurs articles sur Amazon, Walmart et BestBuy.  
+    Résultats clairs, rapides et triés.</p>
+    <div id="status" class="status"></div>
+  </section>
 
-  <!-- 👉 Ici viendront tes résultats (déjà faits précédemment) -->
+  <section id="results"></section>
 </main>
 
-<!-- ===== FOOTER ===== -->
+<!-- FOOTER -->
 <footer>
-  <div class="footer-wrap">
-    <div class="footer-left">
-      <div><strong>ValueFinder</strong> — Opéré par <strong>VF Digital Inc.</strong></div>
-      <div>© 2025 VF Digital Inc. Tous droits réservés.</div>
-      <div>Les prix peuvent varier selon la disponibilité et les vendeurs.</div>
-    </div>
-
-    <div class="footer-right">
-      Version BETA · Canada 🇨🇦
-    </div>
+  <div class="footer-inner">
+    <div><strong>ValueFinder</strong> — un service de <strong>VF Digital Inc.</strong></div>
+    <div>⚠️ Les prix et disponibilités peuvent varier selon les vendeurs.</div>
+    <div>© 2025 VF Digital Inc. — Tous droits réservés.</div>
   </div>
 </footer>
 
